@@ -5,6 +5,9 @@ import os
 from sklearn.model_selection import train_test_split
 import yaml
 
+import sys
+import os
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 from utils.logger import get_logger
 
 # Initialize logger

@@ -5,6 +5,9 @@ import numpy as np
 from sklearn.feature_extraction.text import CountVectorizer
 
 # Custom logger
+import sys
+import os
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 from utils.logger import get_logger
 
 logger = get_logger("feature_engineering")

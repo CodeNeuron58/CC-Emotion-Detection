@@ -6,6 +6,9 @@ import json
 from sklearn.metrics import accuracy_score, precision_score, recall_score, roc_auc_score
 
 # Custom logger
+import sys
+import os
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 from utils.logger import get_logger
 logger = get_logger("model_evaluation")
 

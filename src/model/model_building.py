@@ -8,6 +8,9 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
 
 # Custom logger
+import sys
+import os
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 from utils.logger import get_logger
 logger = get_logger("model_building")
 
