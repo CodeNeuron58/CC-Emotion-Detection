@@ -2,7 +2,7 @@ import os
 import yaml
 import pandas as pd
 import numpy as np
-from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.feature_extraction.text import TfidfVectorizer
 
 # Custom logger
 import sys
@@ -53,17 +53,17 @@ def split_data(train_data, test_data):
 
 
 def apply_bag_of_words(X_train, X_test, params_file="params.yaml"):
-    logger.info(f"Applying Bag-of-Words with params from {params_file}")
+    logger.info(f"Applying tfidf with params from {params_file}")
     try:
         params = yaml.safe_load(open(params_file))["feature_engineering"]["max_features"]
-        vectorizer = CountVectorizer(max_features=params)
+        vectorizer = TfidfVectorizer(max_features=params)
         X_train_vectorized = vectorizer.fit_transform(X_train)
         X_test_vectorized = vectorizer.transform(X_test)
-        logger.info(f"Bag-of-Words applied. Train shape: {X_train_vectorized.shape}, "
+        logger.info(f"tfidf applied. Train shape: {X_train_vectorized.shape}, "
                     f"Test shape: {X_test_vectorized.shape}")
         return X_train_vectorized, X_test_vectorized
     except Exception as e:
-        logger.error(f"Error in Bag-of-Words feature extraction: {e}")
+        logger.error(f"Error in tfidf feature extraction: {e}")
         raise
 
 
