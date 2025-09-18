@@ -5,6 +5,9 @@ import json
 
 from sklearn.metrics import accuracy_score, precision_score, recall_score, roc_auc_score
 
+from dvclive import Live   # type: ignore
+import yaml
+
 # Custom logger
 import sys
 import os
@@ -87,6 +90,19 @@ def main():
     X_test, y_test = split_data(test_data)
     model = load_model('models/model.pkl')
     metrics = evaluate_model(model, X_test, y_test)
+    
+    # Added DVC Live logging here
+    with Live(save_dvc_exp=True) as live:  # save_dvc_exp=True ensures experiment is captured by DVC
+        # log metrics
+        for metric, value in metrics.items():
+            live.log_metric(metric, value)
+
+        # log params
+        with open("params.yaml", "r") as f:
+            params = yaml.safe_load(f)
+            for key, value in params.items():
+                live.log_param(key, value)
+
     save_metrics(metrics) # since output_path is already given in the save_metrics function
     logger.info("Model evaluation pipeline completed successfully.")
 
