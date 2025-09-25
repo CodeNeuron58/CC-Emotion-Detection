@@ -1,18 +1,23 @@
-import numpy as np
-import pandas as pd
+import os
+import sys
 import pickle
 import json
 import mlflow
 import mlflow.sklearn
+import dagshub
 
+import numpy as np
+import pandas as pd
 from sklearn.metrics import accuracy_score, precision_score, recall_score, roc_auc_score
 
 # Custom logger
-import sys
-import os
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 from utils.logger import get_logger
 logger = get_logger("model_evaluation")
+
+# Init DagsHub + MLflow
+dagshub.init(repo_owner="CodeNeuron58", repo_name="CC-Emotion-Detection", mlflow=True)
+mlflow.set_experiment("emotion-detection-experiment")
 
 
 def load_data(test_data_path):
@@ -41,7 +46,7 @@ def split_data(test_data):
 def load_model(model_path):
     logger.info(f"Loading model from {model_path}")
     try:
-        with open(model_path, 'rb') as file:
+        with open(model_path, "rb") as file:
             model = pickle.load(file)
         logger.info("Model loaded successfully.")
         return model
@@ -55,32 +60,28 @@ def evaluate_model(model, X_test, y_test):
     try:
         y_pred = model.predict(X_test)
         accuracy = accuracy_score(y_test, y_pred)
-        precision = precision_score(y_test, y_pred)
-        recall = recall_score(y_test, y_pred)
+        precision = precision_score(y_test, y_pred, zero_division=0)
+        recall = recall_score(y_test, y_pred, zero_division=0)
         roc_auc = roc_auc_score(y_test, y_pred)
 
         metrics = {
-            'accuracy': accuracy,
-            'precision': precision,
-            'recall': recall,
-            'roc_auc': roc_auc
+            "accuracy": accuracy,
+            "precision": precision,
+            "recall": recall,
+            "roc_auc": roc_auc
         }
-
         logger.info(f"Evaluation completed. Metrics: {metrics}")
-
-        with mlflow.start_run(nested=True):  # nested means it can sit inside the training run
-            mlflow.log_metrics(metrics)
-
         return metrics
     except Exception as e:
         logger.error(f"Error evaluating model: {e}")
         raise
 
 
-def save_metrics(metrics, output_path='reports/metrics.json'):
+def save_metrics(metrics, output_path="reports/metrics.json"):
     logger.info(f"Saving metrics to {output_path}")
     try:
-        with open(output_path, 'w') as file:
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)
+        with open(output_path, "w") as file:
             json.dump(metrics, file, indent=4)
         logger.info("Metrics saved successfully.")
     except Exception as e:
@@ -90,13 +91,19 @@ def save_metrics(metrics, output_path='reports/metrics.json'):
 
 def main():
     logger.info("Starting model evaluation pipeline...")
-    test_data = load_data('data/processed/test.csv')
+    test_data = load_data("data/processed/test.csv")
     X_test, y_test = split_data(test_data)
-    model = load_model('models/model.pkl')
+    model = load_model("models/model.pkl")
     metrics = evaluate_model(model, X_test, y_test)
-    save_metrics(metrics)  # local save for reports
+    save_metrics(metrics)
+
+    # ✅ Log metrics into MLflow
+    with mlflow.start_run():
+        for key, value in metrics.items():
+            mlflow.log_metric(f"test_{key}", value)
+
     logger.info("Model evaluation pipeline completed successfully.")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

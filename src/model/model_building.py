@@ -9,6 +9,11 @@ from sklearn.ensemble import GradientBoostingClassifier
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
 
+import dagshub
+dagshub.init(repo_owner='CodeNeuron58', repo_name='CC-Emotion-Detection', mlflow=True)
+mlflow.set_tracking_uri("https://dagshub.com/CodeNeuron58/CC-Emotion-Detection.mlflow")
+mlflow.set_experiment("emotion_detection_experiment")
+
 # Custom logger
 import sys
 import os
@@ -70,9 +75,7 @@ def model_building(X_train, y_train, X_val, y_val, params_file="params.yaml"):
             mlflow.log_param("learning_rate", learning_rate)
             mlflow.log_metric("accuracy", float(acc))  # Convert accuracy to float for loggingacc)
 
-            # Log the model
-            log_model(clf, "gradient_boosting_model", code_paths=["src/model/model_building.py"])
-
+ 
             logger.info(f"Model training completed successfully with validation accuracy={acc:.4f}")
 
         return clf
