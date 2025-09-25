@@ -2,6 +2,8 @@ import numpy as np
 import pandas as pd
 import pickle
 import yaml
+import mlflow
+from mlflow.sklearn import log_model
 
 from sklearn.ensemble import GradientBoostingClassifier
 from sklearn.model_selection import train_test_split
@@ -29,30 +31,50 @@ def load_data(train_data_path):
 def split_data(train_data):
     logger.info("Splitting training data into features and labels...")
     try:
-        X_train = train_data.iloc[:, :-1].values
-        y_train = train_data.iloc[:, -1].values
-        logger.info(f"Split completed. X_train shape: {X_train.shape}, y_train shape: {y_train.shape}")
-        return X_train, y_train
+        X = train_data.iloc[:, :-1].values
+        y = train_data.iloc[:, -1].values
+        X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.2, random_state=42)
+        logger.info(f"Split completed. X_train shape: {X_train.shape}, X_val shape: {X_val.shape}")
+        return X_train, X_val, y_train, y_val
     except Exception as e:
         logger.error(f"Error splitting training data: {e}")
         raise
 
 
-def model_building(X_train, y_train, params_file="params.yaml"):
+def model_building(X_train, y_train, X_val, y_val, params_file="params.yaml"):
     logger.info("Building GradientBoostingClassifier model...")
     try:
         with open(params_file, 'r') as file:
             params = yaml.safe_load(file)["model_building"]
 
+        n_estimators = params["n_estimators"]
+        learning_rate = params["learning_rate"]
+
         clf = GradientBoostingClassifier(
-            n_estimators=params["n_estimators"],
-            learning_rate=params["learning_rate"]
+            n_estimators=n_estimators,
+            learning_rate=learning_rate
         )
 
-        logger.info(f"Training model with parameters: n_estimators={params['n_estimators']}, "
-                    f"learning_rate={params['learning_rate']}")
-        clf.fit(X_train, y_train)
-        logger.info("Model training completed successfully.")
+        with mlflow.start_run():
+            logger.info(f"Training model with parameters: n_estimators={n_estimators}, "
+                        f"learning_rate={learning_rate}")
+            
+            clf.fit(X_train, y_train)
+
+            # Predictions for validation
+            y_pred = clf.predict(X_val)
+            acc = accuracy_score(y_val, y_pred)
+
+            # Log params and metrics
+            mlflow.log_param("n_estimators",n_estimators)
+            mlflow.log_param("learning_rate", learning_rate)
+            mlflow.log_metric("accuracy", float(acc))  # Convert accuracy to float for loggingacc)
+
+            # Log the model
+            log_model(clf, "gradient_boosting_model", code_paths=["src/model/model_building.py"])
+
+            logger.info(f"Model training completed successfully with validation accuracy={acc:.4f}")
+
         return clf
     except Exception as e:
         logger.error(f"Error in model building: {e}")
@@ -73,9 +95,9 @@ def save_model(clf, model_path="models/model.pkl"):
 def main():
     logger.info("Starting model building pipeline...")
     train_data = load_data('data/processed/train.csv')
-    X_train, y_train = split_data(train_data)
-    clf = model_building(X_train, y_train)
-    save_model(clf)  # since model_path is already given in the save_model function
+    X_train, X_val, y_train, y_val = split_data(train_data)
+    clf = model_building(X_train, y_train, X_val, y_val)
+    save_model(clf)  # local pickle save
     logger.info("Model building pipeline completed successfully.")
 
 

@@ -2,6 +2,8 @@ import numpy as np
 import pandas as pd
 import pickle
 import json
+import mlflow
+import mlflow.sklearn
 
 from sklearn.metrics import accuracy_score, precision_score, recall_score, roc_auc_score
 
@@ -63,7 +65,12 @@ def evaluate_model(model, X_test, y_test):
             'recall': recall,
             'roc_auc': roc_auc
         }
+
         logger.info(f"Evaluation completed. Metrics: {metrics}")
+
+        with mlflow.start_run(nested=True):  # nested means it can sit inside the training run
+            mlflow.log_metrics(metrics)
+
         return metrics
     except Exception as e:
         logger.error(f"Error evaluating model: {e}")
@@ -87,7 +94,7 @@ def main():
     X_test, y_test = split_data(test_data)
     model = load_model('models/model.pkl')
     metrics = evaluate_model(model, X_test, y_test)
-    save_metrics(metrics) # since output_path is already given in the save_metrics function
+    save_metrics(metrics)  # local save for reports
     logger.info("Model evaluation pipeline completed successfully.")
 
 
